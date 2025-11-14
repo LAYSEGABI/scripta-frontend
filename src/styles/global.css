@@ -1,0 +1,15 @@
+/* global.css */
+body {
+  margin: 0;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background-color: #f5f6f8;
+  color: #333;
+}
+
+h1, h2, h3 {
+  font-weight: 600;
+}
+
+.container {
+  padding: 24px;
+}
