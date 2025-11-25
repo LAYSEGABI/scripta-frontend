@@ -1,11 +1,18 @@
-/* Estilo geral da página */
+/* Seu arquivo dashboard.css */
+
 .dashboard {
-  flex: 1;
-  background-color: #f8fafc;
-  padding: 32px;
-  min-height: 100vh;
-  font-family: "Inter", sans-serif;
-  color: #333;
+    /* O conteúdo 'dashboard' PRECISA começar após a sidebar fixa */
+    margin-left: 250px; /* CORREÇÃO PRINCIPAL: Igual à largura da sidebar */
+    
+    /* Mantenha o que você já tinha: */
+    flex: 1;
+    background-color: #f8fafc;
+    padding: 32px;
+    min-height: 100vh;
+    font-family: "Inter", sans-serif;
+    color: #333;
+    /* Adicione rolagem, se o conteúdo for maior que a tela */
+    overflow-y: auto; 
 }
 
 /* Título */

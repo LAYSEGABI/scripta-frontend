@@ -4,14 +4,14 @@ import "../styles/sidebar.css";
 
 const Sidebar = () => {
   const location = useLocation();
+  
+  {/* { name: "Catálogo de Livros", path: "/catalogo", icon: <BookOpen size={18} /> },*/}
 
   const menuItems = [
     { name: "Dashboard", path: "/", icon: <Home size={18} /> },
     { name: "Usuários", path: "/usuarios", icon: <Users size={18} /> },
-    { name: "Catálogo de Livros", path: "/catalogo", icon: <BookOpen size={18} /> },
+    { name: "Controle de Estoque", path: "/controle-estoque", icon: <BookOpen size={18} /> },
     { name: "Empréstimos", path: "/emprestimos", icon: <RefreshCcw size={18} /> },
-    { name: "Relatórios", path: "/relatorios", icon: <BarChart2 size={18} /> },
-    { name: "Configurações", path: "/configuracoes", icon: <Settings size={18} /> },
   ];
 
   return (

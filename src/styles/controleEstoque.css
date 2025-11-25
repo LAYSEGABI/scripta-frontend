@@ -1,0 +1,170 @@
+/* --- src/styles/controleEstoque.css --- */
+
+/* Variáveis de Cores */
+:root {
+    --cor-primaria: #28a745; /* Verde Principal (para botões de ação) */
+    --cor-secundaria: #f8f9fa; /* Fundo Claro */
+    --cor-texto: #333;
+    --cor-borda: #dee2e6;
+    --cor-fundo-card: #ffffff;
+    --sidebar-width: 285px;
+}
+
+/* 1. CONTAINER PRINCIPAL E MARGEM PARA SIDEBAR */
+.controle-estoque-container {
+    /* Define a margem esquerda para o espaço da Sidebar */
+    margin-left: var(--sidebar-width); 
+    padding: 30px;
+    padding-right: 50px;
+    background-color: var(--cor-secundaria); 
+    min-height: 100vh; /* Ocupa a altura mínima da tela */
+}
+
+h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #343a40;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--cor-borda);
+}
+
+h2 {
+    font-size: 20px;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    color: var(--cor-texto);
+}
+
+/* 2. FORMULÁRIO DE ADIÇÃO/EDIÇÃO (CARD) */
+.formulario-card {
+    background-color: var(--cor-fundo-card);
+    padding: 25px;
+    border-radius: 8px;
+    margin-bottom: 40px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.formulario-card h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.formulario-card form {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.formulario-card input {
+    padding: 12px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 15px;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.formulario-card input:focus {
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25); /* Sombra verde suave */
+    outline: none;
+}
+
+/* Campos de botão em linha inteira */
+.formulario-card button {
+    grid-column: span 2; 
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    transition: background-color 0.2s;
+}
+
+.formulario-card button[type="submit"] {
+    background-color: var(--cor-primaria); /* Verde principal para Salvar/Adicionar */
+    color: white;
+}
+
+.formulario-card button[type="submit"]:hover {
+    background-color: #1e7e34;
+}
+
+.formulario-card button:nth-of-type(2) { /* Botão Cancelar Edição */
+    background-color: #6c757d; /* Cinza para cancelar */
+    color: white;
+    margin-left: 10px;
+}
+.formulario-card button:nth-of-type(2):hover {
+    background-color: #5a6268;
+}
+
+
+/* 3. PESQUISA */
+.pesquisa-container input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 30px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* 4. TABELA DE LIVROS */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--cor-fundo-card);
+    border-radius: 8px;
+    overflow: hidden; /* Para garantir que os cantos arredondados funcionem */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+th, td {
+    padding: 15px;
+    border-bottom: 1px solid #f2f2f2;
+    text-align: left;
+    font-size: 14px;
+}
+
+th {
+    background-color: #e9ecef; /* Cinza claro para cabeçalho */
+    color: var(--cor-texto);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* 5. BOTÕES DE AÇÃO NA TABELA */
+td button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    margin-right: 8px;
+    transition: opacity 0.2s;
+}
+
+td button:hover {
+    opacity: 0.8;
+}
+
+.btn-editar {
+    background-color: #ffc107; /* Amarelo */
+    color: #333;
+}
+
+.btn-excluir {
+    background-color: #dc3545; /* Vermelho */
+    color: white;
+}
