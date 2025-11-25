@@ -154,7 +154,7 @@ export default function Usuarios() {
 
               <div className="form-group">
                 <label>Data de Nascimento</label>
-                <input type="date" name="dataNascimento" value={formulario.dataNascimento} onChange={handleChange} required className="form-input" />
+                <input type="date" name="dataNascimento" value={formulario.dataNascimento} onChange={handleChange} className="form-input" />
               </div>
 
               <div className="form-group">
@@ -175,7 +175,6 @@ export default function Usuarios() {
             )}
 
             <div className="form-actions">
-              {/* O botão DEVE ser type="submit" */}
               <button type="submit" className="btn btn-primary">
                 <Save size={18} />
                 {formulario.id ? 'Salvar Alterações' : 'Cadastrar'}
