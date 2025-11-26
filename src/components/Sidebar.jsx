@@ -1,17 +1,30 @@
-import { Home, Users, BookOpen, BarChart2, Settings, LogOut, RefreshCcw } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import React from 'react';
+import { Home, Users, BookOpen, RefreshCcw, LogOut, Library } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../styles/sidebar.css";
 
 const Sidebar = () => {
   const location = useLocation();
-  
-  {/* { name: "Catálogo de Livros", path: "/catalogo", icon: <BookOpen size={18} /> },*/}
+  const navigate = useNavigate();
+
+  // Função para deslogar
+  const handleLogout = () => {
+    // 1. Limpa os dados da sessão
+    localStorage.removeItem("token");
+    localStorage.removeItem("usuario_matricula");
+    
+    // 2. Manda o usuário de volta para o Login
+    navigate("/");
+  };
 
   const menuItems = [
-    { name: "Dashboard", path: "/", icon: <Home size={18} /> },
+    // CORREÇÃO: O caminho do dashboard agora é /dashboard, não /
+    { name: "Dashboard", path: "/dashboard", icon: <Home size={18} /> },
     { name: "Usuários", path: "/usuarios", icon: <Users size={18} /> },
     { name: "Controle de Estoque", path: "/controle-estoque", icon: <BookOpen size={18} /> },
     { name: "Empréstimos", path: "/emprestimos", icon: <RefreshCcw size={18} /> },
+    // Se quiser ativar o catálogo depois, é só descomentar:
+    // { name: "Catálogo (Público)", path: "/catalogo", icon: <Library size={18} /> },
   ];
 
   return (
@@ -39,8 +52,8 @@ const Sidebar = () => {
         </ul>
       </nav>
 
-      {/* Rodapé */}
-      <div className="logout">
+      {/* Rodapé - Botão Sair com funcionalidade */}
+      <div className="logout" onClick={handleLogout} style={{ cursor: 'pointer' }}>
         <LogOut size={18} />
         <span>Sair</span>
       </div>
