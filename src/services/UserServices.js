@@ -1,4 +1,6 @@
-const API_URL = "http://localhost:8081/usuarios"; // Porta padrão do Spring é 8080 ou 8081 (verifique no console ao rodar)
+// src/services/UserServices.js
+
+const API_URL = "http://localhost:8081/usuarios"; // Confirme se a porta é 8081 ou 8082
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
@@ -9,12 +11,10 @@ const getAuthHeaders = () => {
 };
 
 export const UserService = {
-  // GET /usuarios - Lista todos (Pode precisar de login dependendo da config)
+  // GET
   listarUsuarios: async () => {
     try {
-      const response = await fetch(API_URL, {
-        headers: getAuthHeaders(),
-      });
+      const response = await fetch(API_URL, { headers: getAuthHeaders() });
       if (!response.ok) throw new Error("Erro ao buscar usuários");
       return await response.json();
     } catch (error) {
@@ -23,23 +23,18 @@ export const UserService = {
     }
   },
 
-  // POST /usuarios - Cadastro
+  // POST
   criarUsuario: async (usuarioData) => {
-    // Convertendo para o formato que o Java espera (visto no Teste)
-    // ... dentro de criarUsuario ...
     const payload = {
       nome: usuarioData.nome,
-      // Remove pontos e traços, enviando apenas números para o Java
       matricula: (usuarioData.matricula || usuarioData.cpf).replace(/\D/g, ""),
       senha: usuarioData.senha || "SenhaForte123456",
       tipoDeConta: usuarioData.tipoDeConta || "ALUNO",
     };
 
-    console.log("Enviando para o Java:", payload);
-
     const response = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" }, // Cadastro geralmente é público ou requer admin
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
@@ -50,12 +45,24 @@ export const UserService = {
     return await response.json();
   },
 
-  // GET /usuarios/me - Perfil Logado
+  // GET Me
   meuPerfil: async () => {
-    const response = await fetch(`${API_URL}/me`, {
-      headers: getAuthHeaders(),
-    });
+    const response = await fetch(`${API_URL}/me`, { headers: getAuthHeaders() });
     if (!response.ok) throw new Error("Erro ao buscar perfil");
     return await response.json();
   },
+
+  // --- NOVA FUNÇÃO (DELETE) ---
+  deletarUsuario: async (id) => {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+        const erro = await response.text();
+        throw new Error(erro || "Erro ao excluir usuário");
+    }
+    return true;
+  }
 };

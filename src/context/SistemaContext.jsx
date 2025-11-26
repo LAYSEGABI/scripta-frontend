@@ -1,6 +1,6 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import { BookService } from '../services/BookService';
-import { UserService } from '../services/UserServices'; // Verifique se o nome do arquivo é UserService.js ou UserServices.js
+import { UserService } from '../services/UserServices'; // Confirme se o arquivo é UserServices.js mesmo
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const SistemaContext = createContext();
@@ -14,9 +14,11 @@ export const SistemaProvider = ({ children }) => {
   // --- 1. DEFINIÇÃO DAS FUNÇÕES ---
 
   // --- FUNÇÕES DE LIVROS ---
-  const carregarLivros = async () => {
+  // useCallback garante que a função não mude de referência a cada render
+  const carregarLivros = useCallback(async () => {
     try {
       const dados = await BookService.listarLivros();
+      // Mapeia para garantir compatibilidade com o front antigo
       const livrosFormatados = dados.map(l => ({
         ...l,
         quantidade: l.quantidadeTotal,      
@@ -26,17 +28,12 @@ export const SistemaProvider = ({ children }) => {
     } catch (error) {
       console.error("Erro ao buscar livros:", error);
     }
-  };
+  }, []);
 
   const adicionarLivro = async (novoLivro) => {
     try {
-      const livroCriado = await BookService.criarLivro(novoLivro);
-      const livroFormatado = {
-        ...livroCriado,
-        quantidade: livroCriado.quantidadeTotal,
-        disponivel: livroCriado.quantidadeDisponivel
-      };
-      setLivros(prev => [...prev, livroFormatado]);
+      await BookService.criarLivro(novoLivro);
+      await carregarLivros(); // Atualiza a lista automaticamente
       return true;
     } catch (error) {
       alert("Erro ao salvar livro: " + error.message);
@@ -46,13 +43,8 @@ export const SistemaProvider = ({ children }) => {
 
   const importarLivroGoogle = async (isbn) => {
     try {
-      const livroCriado = await BookService.importarPorIsbn(isbn);
-      const livroFormatado = {
-        ...livroCriado,
-        quantidade: livroCriado.quantidadeTotal,
-        disponivel: livroCriado.quantidadeDisponivel
-      };
-      setLivros(prev => [...prev, livroFormatado]);
+      await BookService.importarPorIsbn(isbn);
+      await carregarLivros(); // Atualiza a lista automaticamente
       return true;
     } catch (error) {
       alert("Erro ao importar: " + error.message);
@@ -60,14 +52,10 @@ export const SistemaProvider = ({ children }) => {
     }
   };
 
-  // NOVA FUNÇÃO: Remover Livro
   const removerLivro = async (id) => {
     try {
-      // 1. Remove do Banco
       await BookService.deletarLivro(id);
-      
-      // 2. Remove da lista na tela (Filtra todos que NÃO são o ID removido)
-      setLivros(prev => prev.filter(livro => livro.id !== id));
+      await carregarLivros(); // Atualiza a lista automaticamente
       return true;
     } catch (error) {
       alert("Erro ao excluir: " + error.message);
@@ -76,7 +64,7 @@ export const SistemaProvider = ({ children }) => {
   };
 
   // --- FUNÇÕES DE USUÁRIOS ---
-  const carregarUsuarios = async () => {
+  const carregarUsuarios = useCallback(async () => {
     try {
       const dados = await UserService.listarUsuarios();
       const usuariosFormatados = dados.map(u => ({
@@ -88,11 +76,12 @@ export const SistemaProvider = ({ children }) => {
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
     }
-  };
+  }, []);
 
   const adicionarUsuario = async (novoUsuario) => {
     try {
       const usuarioCriado = await UserService.criarUsuario(novoUsuario);
+      // Atualiza lista localmente ou recarrega do banco
       const usuarioFormatado = {
         ...usuarioCriado,
         cpf: usuarioCriado.matricula,
@@ -111,9 +100,11 @@ export const SistemaProvider = ({ children }) => {
     try {
       await BookService.decrementarEstoque(novoEmprestimo.livroId);
       
+      // Atualiza estado local de empréstimos
       const id = emprestimos.length > 0 ? Math.max(...emprestimos.map(e => e.id)) + 1 : 1;
       setEmprestimos(prev => [...prev, { ...novoEmprestimo, id }]);
       
+      // Importante: Atualiza os livros para baixar o estoque na visualização
       await carregarLivros();
       
       return true;
@@ -124,14 +115,13 @@ export const SistemaProvider = ({ children }) => {
   };
 
   // --- 2. CARREGAMENTO INICIAL ---
-  const carregarDados = async () => {
+  const carregarDados = useCallback(async () => {
     await Promise.all([carregarLivros(), carregarUsuarios()]);
-  };
+  }, [carregarLivros, carregarUsuarios]);
 
   useEffect(() => {
     carregarDados();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [carregarDados]);
 
   return (
     <SistemaContext.Provider value={{ 
@@ -140,10 +130,12 @@ export const SistemaProvider = ({ children }) => {
       livros, setLivros, 
       emprestimos, setEmprestimos,
       
-      // Ações
+      // Ações Exportadas
+      carregarLivros, // <--- IMPORTANTE: Exposto para ser usado no ControleEstoque.jsx
+      carregarUsuarios,
       adicionarLivro,
       importarLivroGoogle,
-      removerLivro, // <--- ESTÁ AQUI AGORA
+      removerLivro,
       adicionarUsuario,
       registrarEmprestimo,
       carregarDados 

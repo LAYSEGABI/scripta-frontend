@@ -3,9 +3,10 @@ import { SistemaContext } from "../context/SistemaContext";
 // CORREÇÃO: Adicionei Edit e Trash2 aqui na lista
 import { Search, Plus, BookDown, Edit, Trash2 } from "lucide-react";
 import "../styles/controleEstoque.css";
+import { BookService } from "../services/BookService";
 
 export default function ControleEstoqueLivros() {
-  const { livros, adicionarLivro, importarLivroGoogle, removerLivro } =
+  const { livros, carregarLivros, importarLivroGoogle } =
     useContext(SistemaContext);
 
   const [modoImportacao, setModoImportacao] = useState(true);
@@ -55,14 +56,28 @@ export default function ControleEstoqueLivros() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formulario.titulo || !formulario.isbn) {
-      alert("Preencha título e ISBN!");
-      return;
-    }
-    const sucesso = await adicionarLivro(formulario);
-    if (sucesso) {
-      alert(`Livro "${formulario.titulo}" adicionado!`);
-      resetFormulario();
+    try {
+      if (formulario.id) {
+        await BookService.atualizarLivro(formulario.id, formulario);
+        alert("Livro atualizado com sucesso!");
+      } else {
+        await BookService.criarLivro(formulario);
+        alert("Livro cadastrado com sucesso!");
+      }
+
+      // 2. A MÁGICA ACONTECE AQUI:
+      // Isso força o React a ir no banco buscar a lista nova imediatamente
+      await carregarLivros();
+
+      setFormulario({
+        id: null,
+        titulo: "",
+        autor: "",
+        isbn: "",
+        quantidade: 1,
+      });
+    } catch (error) {
+      alert("Erro: " + error.message);
     }
   };
 
@@ -84,10 +99,14 @@ export default function ControleEstoqueLivros() {
 
   const excluirLivro = async (id, titulo) => {
     if (window.confirm(`Tem certeza que deseja excluir o livro "${titulo}"?`)) {
-      const sucesso = await removerLivro(id);
-      if (sucesso) {
-        // Opcional: Pode colocar um aviso ou toast aqui, mas a lista já vai atualizar sozinha
-        console.log("Livro excluído com sucesso");
+      try {
+        await BookService.deletarLivro(id);
+        alert("Livro excluído com sucesso!");
+
+        // 3. ATUALIZA A LISTA TAMBÉM AO EXCLUIR
+        await carregarLivros();
+      } catch (error) {
+        alert("Erro ao excluir: " + error.message);
       }
     }
   };

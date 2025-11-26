@@ -1,10 +1,9 @@
 // src/services/BookService.js
 
-const API_URL = "http://localhost:8082/livros"; // Porta definida no README
+const API_URL = "http://localhost:8082/livros";
 
-// Função auxiliar para pegar o cabeçalho com Token (se tiver login)
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token"); // Vamos salvar isso depois na tela de login
+  const token = localStorage.getItem("token");
   return {
     "Content-Type": "application/json",
     Authorization: token ? `Bearer ${token}` : "",
@@ -12,7 +11,7 @@ const getAuthHeaders = () => {
 };
 
 export const BookService = {
-  // GET /livros - Lista todos (Público)
+  // 1. LISTAR TODOS
   listarLivros: async () => {
     try {
       const response = await fetch(`${API_URL}`);
@@ -24,13 +23,14 @@ export const BookService = {
     }
   },
 
-  // GET /livros/buscar - Busca por texto (Público)
-  // O README diz "Body Raw String", mas GET com body não é padrão web.
-  // Vou tentar passar como query param que é o padrão Spring, ou body se for muito específico.
+  // 2. BUSCAR
   buscarLivros: async (termo) => {
     try {
-      // Tentativa padrão REST (Query Param)
-      const response = await fetch(`${API_URL}/buscar?q=${termo}`);
+      const response = await fetch(`${API_URL}/buscar`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: termo
+      });
       if (!response.ok) throw new Error("Erro na busca");
       return await response.json();
     } catch (error) {
@@ -39,16 +39,19 @@ export const BookService = {
     }
   },
 
-  // POST /livros - Cria novo (Requer Login - Bibliotecário)
+  // 3. CRIAR (POST)
   criarLivro: async (livroData) => {
-    // Mapeando os campos do seu formulário para o JSON que o Java espera (vide README)
+    // BLINDAGEM: Garante que números não vão como null/NaN
+    const ano = parseInt(livroData.anoPublicacao);
+    const qtd = parseInt(livroData.quantidade);
+
     const payload = {
       titulo: livroData.titulo,
       autor: livroData.autor,
       isbn: livroData.isbn,
-      anoPublicacao: parseInt(livroData.anoPublicacao) || 2024, // Padrão caso vazio
-      quantidadeTotal: parseInt(livroData.quantidade),
-      quantidadeDisponivel: parseInt(livroData.quantidade), // Inicialmente igual ao total
+      anoPublicacao: isNaN(ano) ? 2024 : ano,
+      quantidadeTotal: isNaN(qtd) ? 0 : qtd,
+      quantidadeDisponivel: isNaN(qtd) ? 0 : qtd,
     };
 
     const response = await fetch(API_URL, {
@@ -58,13 +61,61 @@ export const BookService = {
     });
 
     if (!response.ok) {
-      const erro = await response.text();
-      throw new Error(erro || "Erro ao cadastrar livro");
+      let erroMsg = "Erro ao cadastrar livro";
+      try {
+        const erroJson = await response.json();
+        // Se vier objeto de erro complexo, converte pra string
+        if (typeof erroJson === 'object') {
+             erroMsg = JSON.stringify(erroJson);
+        } else {
+             erroMsg = erroJson.message || erroMsg;
+        }
+      } catch {
+        erroMsg = await response.text();
+      }
+      throw new Error(erroMsg);
     }
     return await response.json();
   },
 
-  // DELETE /livros/{id} - Excluir livro
+  // 4. ATUALIZAR (PUT)
+  atualizarLivro: async (id, livroData) => {
+    // BLINDAGEM: Garante que números não vão como null/NaN
+    const ano = parseInt(livroData.anoPublicacao);
+    const qtd = parseInt(livroData.quantidade);
+
+    const payload = {
+      titulo: livroData.titulo,
+      autor: livroData.autor,
+      isbn: livroData.isbn,
+      anoPublicacao: isNaN(ano) ? 2024 : ano,
+      quantidadeTotal: isNaN(qtd) ? 0 : qtd,
+    };
+
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let erroMsg = "Erro ao atualizar livro";
+      try {
+        const erroJson = await response.json();
+        if (typeof erroJson === 'object') {
+             erroMsg = JSON.stringify(erroJson);
+        } else {
+             erroMsg = erroJson.message || erroMsg;
+        }
+      } catch {
+        erroMsg = await response.text();
+      }
+      throw new Error(erroMsg);
+    }
+    return await response.json();
+  },
+
+  // 5. DELETAR (DELETE)
   deletarLivro: async (id) => {
     const response = await fetch(`${API_URL}/${id}`, {
       method: "DELETE",
@@ -75,7 +126,7 @@ export const BookService = {
     return true;
   },
 
-  // POST /livros/importar/{isbn} - Importa do Google (Requer Login)
+  // 6. IMPORTAR (POST)
   importarPorIsbn: async (isbn) => {
     const response = await fetch(`${API_URL}/importar/${isbn}`, {
       method: "POST",
@@ -86,7 +137,7 @@ export const BookService = {
     return await response.json();
   },
 
-  // PUT /livros/{id}/estoque/decrementar (Para Empréstimo)
+  // 7. DECREMENTAR ESTOQUE (PUT)
   decrementarEstoque: async (id) => {
     const response = await fetch(`${API_URL}/${id}/estoque/decrementar`, {
       method: "PUT",
@@ -96,7 +147,7 @@ export const BookService = {
     return true;
   },
 
-  // PUT /livros/{id}/estoque/incrementar (Para Devolução)
+  // 8. INCREMENTAR ESTOQUE (PUT)
   incrementarEstoque: async (id) => {
     const response = await fetch(`${API_URL}/${id}/estoque/incrementar`, {
       method: "PUT",
@@ -104,5 +155,5 @@ export const BookService = {
     });
     if (!response.ok) throw new Error("Erro ao atualizar estoque");
     return true;
-  },
+  }
 };

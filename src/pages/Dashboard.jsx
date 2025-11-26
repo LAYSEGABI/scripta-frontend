@@ -1,14 +1,11 @@
 import React, { useEffect, useState, useMemo, useContext } from "react";
-import { Book, RefreshCcw, AlertTriangle, UserX, Clock, CheckCircle } from "lucide-react";
+import { Book, RefreshCcw, AlertTriangle, UserX, CheckCircle, Layers } from "lucide-react"; // Adicionei 'Layers'
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { SistemaContext } from "../context/SistemaContext"; // Ajuste o caminho se necessário
+import { SistemaContext } from "../context/SistemaContext"; 
 import "../styles/dashboard.css";
 
 const Dashboard = () => {
-  // 1. Puxa dados globais
   const { livros, usuarios } = useContext(SistemaContext);
-
-  // 2. Carrega Empréstimos do LocalStorage (igual fizemos na tela de Empréstimos)
   const [emprestimos, setEmprestimos] = useState([]);
 
   useEffect(() => {
@@ -18,54 +15,49 @@ const Dashboard = () => {
     }
   }, []);
 
-  // 3. Cálculos dos Cards (KPIs)
+  // --- CÁLCULOS ESTATÍSTICOS ---
   const stats = useMemo(() => {
     const hoje = new Date().toISOString().split('T')[0];
 
-    // Total de livros (Simples: tamanho do array)
-    const totalLivros = livros.length;
+    // 1. Total de Títulos (Cadastros únicos)
+    const totalTitulos = livros.length;
 
-    // Empréstimos Ativos (Status 'Ativo')
+    // 2. Total de Exemplares (Soma da quantidade de cada livro)
+    // Verifica 'quantidadeTotal' ou 'quantidade' dependendo de como veio do backend
+    const totalExemplares = livros.reduce((acc, livro) => {
+        const qtd = parseInt(livro.quantidadeTotal) || parseInt(livro.quantidade) || 0;
+        return acc + qtd;
+    }, 0);
+
     const ativos = emprestimos.filter(e => e.status === 'Ativo').length;
-
-    // Livros Atrasados (Ativos + Data prevista menor que hoje)
     const atrasados = emprestimos.filter(e => e.status === 'Ativo' && e.dataDevolucaoPrevista < hoje).length;
-
-    // Alunos Penalizados (Lógica: Contar quantos usuários únicos têm livros atrasados)
-    // Se quiser algo mais complexo, precisaria de um campo 'status' no usuário, mas isso serve por hora.
+    
     const idsComAtraso = emprestimos
       .filter(e => e.status === 'Ativo' && e.dataDevolucaoPrevista < hoje)
       .map(e => e.usuarioId);
-    const penalizados = new Set(idsComAtraso).size; // Set remove duplicatas
+    const penalizados = new Set(idsComAtraso).size;
 
-    return { totalLivros, ativos, atrasados, penalizados };
+    return { totalTitulos, totalExemplares, ativos, atrasados, penalizados };
   }, [livros, emprestimos]);
 
-  // 4. Lógica do Gráfico (Agrupar empréstimos por mês)
+  // --- DADOS DO GRÁFICO ---
   const chartData = useMemo(() => {
     const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    
-    // Cria estrutura base com 0
     const dados = meses.map(m => ({ name: m, emprestimos: 0 }));
 
     emprestimos.forEach(emp => {
       if (emp.dataEmprestimo) {
-        const mesIndex = new Date(emp.dataEmprestimo).getMonth(); // 0 = Jan, 1 = Fev...
-        // Incrementa o contador daquele mês
+        const mesIndex = new Date(emp.dataEmprestimo).getMonth();
         if (dados[mesIndex]) {
           dados[mesIndex].emprestimos += 1;
         }
       }
     });
-
-    // Opcional: Cortar para mostrar apenas até o mês atual ou os últimos 6 meses
-    // Por enquanto retorna o ano todo para ficar bonito no gráfico
     return dados;
   }, [emprestimos]);
 
-  // 5. Atividades Recentes (Pegar os últimos 5 empréstimos baseados no ID ou Data)
+  // --- ATIVIDADES RECENTES ---
   const atividadesRecentes = useMemo(() => {
-    // Clona o array e inverte para pegar os últimos adicionados
     const ultimos = [...emprestimos].reverse().slice(0, 5);
 
     return ultimos.map(emp => {
@@ -73,7 +65,7 @@ const Dashboard = () => {
       const tituloLivro = livros.find(l => l.id === emp.livroId)?.titulo || "Livro Desconhecido";
       const hoje = new Date().toISOString().split('T')[0];
       
-      let tipo = "loan"; // Padrão: Empréstimo novo
+      let tipo = "loan";
       let texto = `Empréstimo: ${tituloLivro}`;
       
       if (emp.status === 'Devolvido') {
@@ -84,7 +76,7 @@ const Dashboard = () => {
         texto = `Atraso: ${nomeUsuario}`;
       }
 
-      return { id: emp.id, tipo, texto, usuario: nomeUsuario };
+      return { id: emp.id, tipo, texto };
     });
   }, [emprestimos, usuarios, livros]);
 
@@ -92,18 +84,32 @@ const Dashboard = () => {
     <div className="dashboard dashboard-container">
       <h1 className="dashboard-title">Dashboard Gerencial</h1>
 
-      {/* Cards superiores com DADOS REAIS */}
+      {/* Cards superiores */}
       <div className="dashboard-cards">
+        
+        {/* CARD 1: Títulos Únicos */}
         <div className="card">
           <div className="icon-wrapper green">
             <Book size={22} />
           </div>
           <div className="card-info">
-            <p>Total de Livros</p>
-            <h2>{stats.totalLivros}</h2>
+            <p>Títulos Diferentes</p>
+            <h2>{stats.totalTitulos}</h2>
           </div>
         </div>
 
+        {/* CARD 2 (NOVO): Total de Exemplares Físicos */}
+        <div className="card">
+          <div className="icon-wrapper purple">
+            <Layers size={22} />
+          </div>
+          <div className="card-info">
+            <p>Acervo Total (Livros)</p>
+            <h2>{stats.totalExemplares}</h2>
+          </div>
+        </div>
+
+        {/* CARD 3: Empréstimos */}
         <div className="card">
           <div className="icon-wrapper blue">
             <RefreshCcw size={22} />
@@ -114,16 +120,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="card">
-          <div className="icon-wrapper orange">
-            <UserX size={22} />
-          </div>
-          <div className="card-info">
-            <p>Alunos com Atraso</p>
-            <h2>{stats.penalizados}</h2>
-          </div>
-        </div>
-
+        {/* CARD 4: Atrasos */}
         <div className="card">
           <div className="icon-wrapper red">
             <AlertTriangle size={22} />
@@ -135,27 +132,16 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Gráfico e atividades */}
       <div className="dashboard-content">
         <div className="chart-card">
           <h3>Volume de Empréstimos (Anual)</h3>
-          {/* ResponsiveContainer faz o gráfico se ajustar ao tamanho da div pai */}
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={chartData}>
               <CartesianGrid stroke="#e0e0e0" strokeDasharray="3 3" />
               <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip 
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="emprestimos" 
-                stroke="#16a34a" 
-                strokeWidth={3} 
-                dot={{ r: 4, fill: "#16a34a", strokeWidth: 2, stroke: "#fff" }}
-                activeDot={{ r: 6 }} 
-              />
+              <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
+              <Line type="monotone" dataKey="emprestimos" stroke="#16a34a" strokeWidth={3} dot={{ r: 4, fill: "#16a34a", strokeWidth: 2, stroke: "#fff" }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -171,11 +157,7 @@ const Dashboard = () => {
                   {item.tipo === 'returned' && <CheckCircle size={14} style={{ display:'inline', marginRight: 6 }} />}
                   {item.tipo === 'loan' && <RefreshCcw size={14} style={{ display:'inline', marginRight: 6 }} />}
                   {item.tipo === 'late' && <AlertTriangle size={14} style={{ display:'inline', marginRight: 6 }} />}
-                  
-                  {/* Renderiza o texto com HTML seguro simples */}
-                  <span dangerouslySetInnerHTML={{ 
-                    __html: item.texto.replace(/: (.*)/, ': <strong>$1</strong>') 
-                  }} />
+                  <span dangerouslySetInnerHTML={{ __html: item.texto.replace(/: (.*)/, ': <strong>$1</strong>') }} />
                 </li>
               ))}
             </ul>

@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useContext } from 'react';
-import { Trash2, Edit, Search, UserPlus, Save, X, AlertCircle } from 'lucide-react';
-// IMPORTANTE: Verifique se o caminho está correto
-import { SistemaContext } from '../context/SistemaContext'; 
+import React, { useState, useMemo, useContext, useEffect } from 'react';
+import { Trash2, Edit, Search, UserPlus, Save, X, AlertCircle, RefreshCcw } from 'lucide-react';
+import { SistemaContext } from '../context/SistemaContext';
+import { UserService } from '../services/UserServices'; // Confirme se o arquivo é UserServices.js ou UserService.js
 import '../styles/usuarios.css';
 
 // --- FUNÇÕES UTILITÁRIAS ---
@@ -32,20 +32,28 @@ const mascaraCPF = (valor) => {
 };
 
 const formatarDataBR = (dataISO) => {
-  if (!dataISO) return '';
+  if (!dataISO) return '-';
   const [ano, mes, dia] = dataISO.split('-');
   return `${dia}/${mes}/${ano}`;
 };
 
 export default function Usuarios() {
-  // Pegando a função do contexto
-  const { usuarios, adicionarUsuario } = useContext(SistemaContext); 
+  const { usuarios, adicionarUsuario, carregarUsuarios } = useContext(SistemaContext);
   
   const [formulario, setFormulario] = useState({
-    id: null, nome: '', email: '', cpf: '', dataNascimento: '', status: 'Ativo',
+    id: null, nome: '', email: '', cpf: '', dataNascimento: '', status: 'Ativo', senha: ''
   });
+  
   const [termoPesquisa, setTermoPesquisa] = useState('');
   const [erroValidacao, setErroValidacao] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Carrega a lista ao abrir a tela
+  useEffect(() => {
+    if (carregarUsuarios) {
+        carregarUsuarios();
+    }
+  }, [carregarUsuarios]);
 
   const usuariosFiltrados = useMemo(() => {
     if (!termoPesquisa) return usuarios;
@@ -53,7 +61,8 @@ export default function Usuarios() {
     return usuarios.filter(usuario =>
       usuario.nome.toLowerCase().includes(termo) ||
       usuario.email.toLowerCase().includes(termo) ||
-      usuario.cpf.includes(termo)
+      (usuario.cpf && usuario.cpf.includes(termo)) ||
+      (usuario.matricula && usuario.matricula.includes(termo))
     );
   }, [usuarios, termoPesquisa]);
 
@@ -63,54 +72,73 @@ export default function Usuarios() {
     setFormulario({ ...formulario, [name]: value });
   };
 
-  // --- A FUNÇÃO DE ENVIO CORRIGIDA ---
+  // --- SALVAR ---
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Impede o recarregamento da página
-    console.log("Botão Clicado! Dados:", formulario); // Debug
-
+    e.preventDefault();
     setErroValidacao('');
+    setLoading(true);
 
-    // Validação de CPF
-    if (!validarCPF(formulario.cpf)) { 
-        setErroValidacao('O CPF informado é inválido.'); 
-        return; 
+    try {
+        // CORREÇÃO: Validação de CPF usando a função utilitária
+        if (!validarCPF(formulario.cpf)) { 
+            setErroValidacao('CPF inválido.'); 
+            setLoading(false);
+            return; 
+        }
+
+        const sucesso = await adicionarUsuario(formulario);
+
+        if (sucesso) {
+            alert("Operação realizada com sucesso!");
+            resetFormulario();
+            if (carregarUsuarios) await carregarUsuarios();
+        } else {
+            setErroValidacao("Erro ao conectar com o servidor. Tente novamente.");
+        }
+    } catch (error) {
+        setErroValidacao("Erro inesperado: " + error.message);
+    } finally {
+        setLoading(false);
     }
+  };
 
-    // Tenta cadastrar no Backend via Contexto
-    // Passamos o formulário inteiro. O UserService vai limpar o CPF lá dentro.
-    const sucesso = await adicionarUsuario(formulario);
-
-    if (sucesso) {
-        alert("Usuário salvo com sucesso!");
-        resetFormulario();
-    } else {
-        setErroValidacao("Erro ao salvar no servidor. Verifique se o Back-end está rodando.");
+  // --- EXCLUIR ---
+  const handleExcluir = async (id, nome) => {
+    if (window.confirm(`Tem certeza que deseja excluir "${nome}"?`)) {
+      try {
+        await UserService.deletarUsuario(id);
+        alert("Usuário excluído!");
+        if (carregarUsuarios) await carregarUsuarios();
+        else window.location.reload();
+      } catch (error) {
+        alert("Erro ao excluir: " + error.message);
+      }
     }
   };
 
   const iniciarEdicao = (usuario) => {
-    setFormulario(usuario);
+    setFormulario({
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email || '',
+        cpf: usuario.cpf || usuario.matricula || '',
+        dataNascimento: usuario.dataNascimento || '',
+        status: usuario.status || 'Ativo',
+        senha: '' 
+    });
     setErroValidacao('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   
   const resetFormulario = () => {
-    setFormulario({ id: null, nome: '', email: '', cpf: '', dataNascimento: '', status: 'Ativo' });
+    setFormulario({ id: null, nome: '', email: '', cpf: '', dataNascimento: '', status: 'Ativo', senha: '' });
     setErroValidacao('');
-  };
-
-  // Função placeholder para excluir (ainda não conectada ao Java)
-  const excluirUsuario = (id, nome) => {
-    if (window.confirm(`Tem certeza que deseja excluir o usuário "${nome}"?`)) {
-      alert("Funcionalidade de exclusão ainda não implementada no Back-end.");
-    }
   };
 
   const getStatusColor = (status) => {
     switch(status) {
       case 'Ativo': return 'badge-ativo';
       case 'Inativo': return 'badge-inativo';
-      case 'Suspenso': return 'badge-suspenso';
       default: return 'badge-inativo';
     }
   };
@@ -123,33 +151,34 @@ export default function Usuarios() {
             <UserPlus className="icone-titulo" size={32} />
             <h1>Gerenciamento de Usuários</h1>
           </div>
-          <p className="header-subtitulo">Cadastre e gerencie o acesso dos usuários do sistema.</p>
+          <div className="header-actions">
+             <button onClick={() => carregarUsuarios && carregarUsuarios()} className="btn-icon" title="Recarregar Lista">
+                <RefreshCcw size={20} />
+             </button>
+          </div>
         </header>
 
-        {/* --- CARD DE CADASTRO --- */}
         <div className="card">
           <div className="card-header">
             {formulario.id ? <Edit size={24} style={{ color: '#f59e0b' }} /> : <UserPlus size={24} style={{ color: '#2563eb' }} />}
             <span>{formulario.id ? 'Editar Usuário' : 'Novo Cadastro'}</span>
           </div>
 
-          {/* O formulário deve ter o onSubmit apontando para handleSubmit */}
           <form onSubmit={handleSubmit} className="form-container">
             <div className="form-grid">
-              
               <div className="form-group">
                 <label>Nome Completo</label>
-                <input type="text" name="nome" value={formulario.nome} onChange={handleChange} required className="form-input" placeholder="Ex: João Silva" />
+                <input type="text" name="nome" value={formulario.nome} onChange={handleChange} required className="form-input" />
               </div>
 
               <div className="form-group">
                 <label>Email</label>
-                <input type="email" name="email" value={formulario.email} onChange={handleChange} required className="form-input" placeholder="email@exemplo.com" />
+                <input type="email" name="email" value={formulario.email} onChange={handleChange} className="form-input" />
               </div>
 
               <div className="form-group">
                 <label>CPF</label>
-                <input type="text" name="cpf" value={formulario.cpf} onChange={handleChange} maxLength="14" required className={`form-input ${erroValidacao ? 'erro' : ''}`} placeholder="000.000.000-00" />
+                <input type="text" name="cpf" value={formulario.cpf} onChange={handleChange} maxLength="14" required className="form-input" />
               </div>
 
               <div className="form-group">
@@ -158,12 +187,11 @@ export default function Usuarios() {
               </div>
 
               <div className="form-group">
-                <label>Status</label>
-                <select name="status" value={formulario.status} onChange={handleChange} className="form-select">
-                  <option value="Ativo">Ativo</option>
-                  <option value="Inativo">Inativo</option>
-                  <option value="Suspenso">Suspenso</option>
-                </select>
+                 <label>Status</label>
+                 <select name="status" value={formulario.status} onChange={handleChange} className="form-select">
+                    <option value="Ativo">Ativo</option>
+                    <option value="Inativo">Inativo</option>
+                 </select>
               </div>
             </div>
 
@@ -175,32 +203,30 @@ export default function Usuarios() {
             )}
 
             <div className="form-actions">
-              <button type="submit" className="btn btn-primary">
+              <button type="submit" className="btn btn-primary" disabled={loading}>
                 <Save size={18} />
-                {formulario.id ? 'Salvar Alterações' : 'Cadastrar'}
+                {loading ? 'Salvando...' : (formulario.id ? 'Salvar Alterações' : 'Cadastrar')}
               </button>
               
               {formulario.id && (
                 <button type="button" onClick={resetFormulario} className="btn btn-secondary">
-                  <X size={18} />
-                  Cancelar
+                  <X size={18} /> Cancelar
                 </button>
               )}
             </div>
           </form>
         </div>
 
-        {/* --- LISTAGEM --- */}
         <div className="card">
           <div className="pesquisa-wrapper">
             <h2 className="titulo-secao">
-              Usuários Cadastrados <span className="contador-registros">({usuariosFiltrados.length})</span>
+              Usuários Cadastrados ({usuariosFiltrados.length})
             </h2>
             <div className="input-pesquisa-container">
               <Search className="icone-pesquisa" />
               <input
                 type="text"
-                placeholder="Buscar por nome, CPF ou email..."
+                placeholder="Pesquisar..."
                 value={termoPesquisa}
                 onChange={(e) => setTermoPesquisa(e.target.value)}
                 className="input-pesquisa"
@@ -210,8 +236,9 @@ export default function Usuarios() {
 
           <div className="tabela-container">
             {usuarios.length === 0 ? (
-              <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-                <p>Nenhum registro encontrado.</p>
+              <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
+                <p>Nenhum usuário encontrado.</p>
+                <p style={{fontSize: '0.9rem'}}>Verifique se o Back-end está rodando e se a porta está correta.</p>
               </div>
             ) : (
               <table className="tabela-usuarios">
@@ -228,25 +255,24 @@ export default function Usuarios() {
                   {usuariosFiltrados.map((usuario) => (
                     <tr key={usuario.id}>
                       <td className="celula-info">
-                        <div style={{ fontWeight: 600, color: '#1e293b' }}>{usuario.nome}</div>
+                        <div style={{ fontWeight: 600 }}>{usuario.nome}</div>
                         <small>{usuario.email}</small>
                       </td>
-                      <td style={{ fontFamily: 'monospace', color: '#475569', fontSize: '0.9rem' }}>
-                        {usuario.cpf}
+                      <td style={{ fontFamily: 'monospace' }}>
+                        {usuario.cpf || usuario.matricula}
                       </td>
-                      {/* Data de nascimento pode vir vazia do Java se não mapeamos, tratei aqui */}
-                      <td>{usuario.dataNascimento ? formatarDataBR(usuario.dataNascimento) : '-'}</td>
+                      <td>{formatarDataBR(usuario.dataNascimento)}</td>
                       <td style={{ textAlign: 'center' }}>
-                        <span className={`badge ${getStatusColor(usuario.status)}`}>
+                        <span className={`badge ${getStatusColor(usuario.status || 'Ativo')}`}>
                           {usuario.status || 'Ativo'}
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                          <button onClick={() => iniciarEdicao(usuario)} className="btn-icon editar" title="Editar">
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <button onClick={() => iniciarEdicao(usuario)} className="btn-icon editar">
                             <Edit size={18} />
                           </button>
-                          <button onClick={() => excluirUsuario(usuario.id, usuario.nome)} className="btn-icon excluir" title="Excluir">
+                          <button onClick={() => handleExcluir(usuario.id, usuario.nome)} className="btn-icon excluir">
                             <Trash2 size={18} />
                           </button>
                         </div>

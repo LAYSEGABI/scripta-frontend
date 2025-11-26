@@ -1,12 +1,16 @@
 /* Seu arquivo sidebar.css ou o estilo aplicado à sua barra lateral */
 .sidebar {
-    position: fixed;
-    width: 250px; /* Defina a largura exata da sua sidebar */
-    height: 100vh;
-    top: 0;
-    left: 0;
-    background-color: #17793c; /* Cor verde escura da sua imagem */
-    z-index: 100; /* Garante que ela fique por cima de qualquer coisa acidentalmente */
+  position: fixed;
+  width: 250px;
+  /* Defina a largura exata da sua sidebar */
+  height: 100vh;
+  top: 0;
+  left: 0;
+  color: white;
+  background-color: #17793c;
+  /* Cor verde escura da sua imagem */
+  z-index: 100;
+  /* Garante que ela fique por cima de qualquer coisa acidentalmente */
 }
 
 /* ===== Cabeçalho ===== */
@@ -38,6 +42,10 @@
   list-style: none;
   padding: 0;
   margin: 0;
+}
+
+.logo-text {
+  color: white;
 }
 
 .menu-link {
