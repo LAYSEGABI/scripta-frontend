@@ -1,6 +1,6 @@
-// src/services/UserServices.js
+// const BASE_URL = "http://localhost:8082";
 
-const BASE_URL = "http://localhost:8081"; // Porta do servidor de Usuários
+const BASE_URL = "usuario-service-production-14cf.up.railway.app";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
@@ -71,7 +71,7 @@ export const UserService = {
       try {
           const erroJson = JSON.parse(erroTexto);
           if(erroJson.message) erroMsg = erroJson.message;
-      } catch { }
+      } catch {}
 
       throw new Error(erroMsg || "Erro ao criar usuário");
     }
