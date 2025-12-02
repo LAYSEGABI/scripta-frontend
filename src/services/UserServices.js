@@ -4,10 +4,18 @@ const BASE_URL = "https://usuario-service-production-14cf.up.railway.app";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
-  const cleanToken = token ? token.trim() : "";
+  
+  // Se não tem token ou ele é apenas espaços vazios, retorna objeto vazio
+  if (!token || token.trim() === "") {
+    return {
+      "Content-Type": "application/json"
+    };
+  }
+
+  // Se tem token, garante que não tem espaços extras
   return {
     "Content-Type": "application/json",
-    Authorization: cleanToken ? `Bearer ${cleanToken}` : "",
+    "Authorization": `Bearer ${token.trim()}`,
   };
 };
 
@@ -15,18 +23,29 @@ export const UserService = {
 
   // --- LOGIN ---
   login: async (matricula, senha) => {
-    const response = await fetch(`${BASE_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matricula, senha }),
-    });
+    console.log("Tentando login com:", matricula, senha);
 
-    if (!response.ok) {
-      throw new Error("Login falhou. Verifique matrícula e senha.");
+    // Aceita qualquer login, ou defina um específico se quiser
+    // Aqui estou aceitando se digitar qualquer coisa
+    if (matricula && senha) {
+      
+      const usuarioFake = {
+        id: 1,
+        nome: "Administrador (Demo)",
+        matricula: matricula,
+        tipoDeConta: "ADMIN",
+        email: "admin@demo.com"
+      };
+
+      // Salva um token falso e o usuário no navegador para o sistema achar que está logado
+      localStorage.setItem("token", "token_demo_apresentacao_123");
+      localStorage.setItem("usuario", JSON.stringify(usuarioFake));
+
+      // Retorna sucesso imediato
+      return Promise.resolve(usuarioFake);
     }
 
-    const data = await response.json();
-    return data;
+    throw new Error("Preencha login e senha.");
   },
 
   // --- LISTAR ---
