@@ -1,6 +1,6 @@
 // src/services/BookService.js
 
-const API_URL = "http://localhost:8082/livros";
+const API_URL = "https://usuario-service-production-14cf.up.railway.app";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
