@@ -63,38 +63,37 @@ export const UserService = {
   },
 
   // --- CRIAR (CORRIGIDO) ---
+ // --- CRIAR (SIMPLIFICADO PARA APRESENTAÇÃO) ---
   criarUsuario: async (usuarioData) => {
+    
+    // Monta apenas o payload que o Backend espera agora
     const payload = {
       nome: usuarioData.nome,
-      // Campos que estavam faltando:
-      email: usuarioData.email,
-      dataNascimento: usuarioData.dataNascimento, 
-      status: usuarioData.status ? usuarioData.status.toUpperCase() : "ATIVO", // Garante maiúsculo
-      
-      // Campos já existentes:
-      matricula: (usuarioData.matricula || usuarioData.cpf).replace(/\D/g, ""),
-      senha: usuarioData.senha || "123456789012",
+      matricula: usuarioData.matricula, // Agora a matrícula vai direta, sem limpar CPF
+      senha: usuarioData.senha || "123456", // Senha padrão se não preencher
       tipoDeConta: usuarioData.tipoDeConta || "ALUNO",
+      status: "ATIVO"
     };
+
+    console.log("Enviando payload:", payload);
 
     const response = await fetch(`${BASE_URL}/usuarios`, {
       method: "POST",
-      headers: getAuthHeaders(),
+      // Como removemos a segurança, nem precisaria de header, mas mal não faz
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      const erroTexto = await response.text();
-      let erroMsg = erroTexto;
-      
-      try {
-          const erroJson = JSON.parse(erroTexto);
-          if(erroJson.message) erroMsg = erroJson.message;
-      } catch {}
-
-      throw new Error(erroMsg || "Erro ao criar usuário");
+      throw new Error("Erro ao criar usuário.");
     }
-    return await response.json();
+    
+    // Tenta ler o JSON, se falhar (vazio), retorna sucesso genérico
+    try {
+        return await response.json();
+    } catch (e) {
+        return { message: "Criado com sucesso" };
+    }
   },
 
   // --- PERFIL ---

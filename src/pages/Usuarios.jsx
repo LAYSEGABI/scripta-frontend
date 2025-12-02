@@ -13,56 +13,17 @@ import { SistemaContext } from "../context/SistemaContext";
 import { UserService } from "../services/UserServices";
 import "../styles/usuarios.css";
 
-// --- FUNÇÕES UTILITÁRIAS ---
-const validarCPF = (cpf) => {
-  cpf = cpf.replace(/[^\d]+/g, "");
-  if (cpf === "") return false;
-  if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
-  let soma = 0,
-    resto;
-  for (let i = 1; i <= 9; i++)
-    soma = soma + parseInt(cpf.substring(i - 1, i)) * (11 - i);
-  resto = (soma * 10) % 11;
-  if (resto === 10 || resto === 11) resto = 0;
-  if (resto !== parseInt(cpf.substring(9, 10))) return false;
-  soma = 0;
-  for (let i = 1; i <= 10; i++)
-    soma = soma + parseInt(cpf.substring(i - 1, i)) * (12 - i);
-  resto = (soma * 10) % 11;
-  if (resto === 10 || resto === 11) resto = 0;
-  if (resto !== parseInt(cpf.substring(10, 11))) return false;
-  return true;
-};
-
-const mascaraCPF = (valor) => {
-  return valor
-    .replace(/\D/g, "")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1,2})/, "$1-$2")
-    .replace(/(-\d{2})\d+?$/, "$1");
-};
-
-const formatarDataBR = (dataISO) => {
-  if (!dataISO) return "-";
-  const [ano, mes, dia] = dataISO.split("-");
-  return `${dia}/${mes}/${ano}`;
-};
-
 export default function Usuarios() {
-  const { usuarios, adicionarUsuario, carregarUsuarios } =
-    useContext(SistemaContext);
+  const { usuarios, adicionarUsuario, carregarUsuarios } = useContext(SistemaContext);
 
-  // Adicionei 'tipoDeConta' e 'senha' no estado inicial
+  // --- ESTADO DO FORMULÁRIO SIMPLIFICADO ---
   const [formulario, setFormulario] = useState({
     id: null,
     nome: "",
-    email: "",
-    cpf: "",
-    dataNascimento: "",
-    status: "Ativo",
+    matricula: "", // Substitui o CPF/Email
+    status: "ATIVO", // Valor padrão maiúsculo para o Java
     senha: "",
-    tipoDeConta: "ALUNO", // Valor padrão
+    tipoDeConta: "ALUNO",
   });
 
   const [termoPesquisa, setTermoPesquisa] = useState("");
@@ -75,72 +36,64 @@ export default function Usuarios() {
     }
   }, [carregarUsuarios]);
 
+  // --- FILTRO SIMPLIFICADO ---
   const usuariosFiltrados = useMemo(() => {
     if (!termoPesquisa) return usuarios;
     const termo = termoPesquisa.toLowerCase();
     return usuarios.filter(
       (usuario) =>
         usuario.nome.toLowerCase().includes(termo) ||
-        usuario.email.toLowerCase().includes(termo) ||
-        (usuario.cpf && usuario.cpf.includes(termo)) ||
-        (usuario.matricula && usuario.matricula.includes(termo))
+        (usuario.matricula && usuario.matricula.toLowerCase().includes(termo))
     );
   }, [usuarios, termoPesquisa]);
 
   const handleChange = (e) => {
-    let { name, value } = e.target;
-    if (name === "cpf") {
-      value = mascaraCPF(value);
-      setErroValidacao("");
-    }
+    const { name, value } = e.target;
     setFormulario({ ...formulario, [name]: value });
   };
 
-  // --- SALVAR ---
+  // --- SALVAR (SEM VALIDAÇÕES COMPLEXAS) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErroValidacao("");
     setLoading(true);
 
     try {
-      // Validação CPF
-      if (!validarCPF(formulario.cpf)) {
-        setErroValidacao("CPF inválido.");
+      // Validação básica de senha apenas se for preenchida
+      if (formulario.senha && formulario.senha.length < 3) {
+        setErroValidacao("A senha é muito curta.");
         setLoading(false);
         return;
       }
 
-      // --- NOVA VALIDAÇÃO DE SENHA ---
-      // Se o campo senha foi preenchido (não está vazio), tem que ter 10+ caracteres
-      if (formulario.senha && formulario.senha.length < 10) {
-        setErroValidacao("A senha deve ter no mínimo 10 caracteres.");
-        setLoading(false);
-        return;
-      }
+      // Prepara o objeto para o Context/Service
+      const usuarioParaSalvar = {
+        ...formulario,
+        // Garante que se for edição, mantém o ID
+      };
 
-      const sucesso = await adicionarUsuario(formulario);
+      const sucesso = await adicionarUsuario(usuarioParaSalvar);
 
       if (sucesso) {
-        alert("Operação realizada com sucesso!");
+        alert("Salvo com sucesso!"); // Feedback simples
         resetFormulario();
         if (carregarUsuarios) await carregarUsuarios();
       } else {
-        setErroValidacao("Erro ao conectar com o servidor. Tente novamente.");
+        setErroValidacao("Erro ao salvar. Tente novamente.");
       }
     } catch (error) {
-      setErroValidacao("Erro inesperado: " + error.message);
+      setErroValidacao("Erro: " + error.message);
     } finally {
       setLoading(false);
     }
   };
 
   const handleExcluir = async (id, nome) => {
-    if (window.confirm(`Tem certeza que deseja excluir "${nome}"?`)) {
+    if (window.confirm(`Excluir "${nome}"?`)) {
       try {
         await UserService.deletarUsuario(id);
-        alert("Usuário excluído!");
+        alert("Excluído!");
         if (carregarUsuarios) await carregarUsuarios();
-        else window.location.reload();
       } catch (error) {
         alert("Erro ao excluir: " + error.message);
       }
@@ -151,12 +104,10 @@ export default function Usuarios() {
     setFormulario({
       id: usuario.id,
       nome: usuario.nome,
-      email: usuario.email || "",
-      cpf: usuario.cpf || usuario.matricula || "",
-      dataNascimento: usuario.dataNascimento || "",
-      status: usuario.status || "Ativo",
+      matricula: usuario.matricula || usuario.cpf || "", // Tenta pegar matrícula ou cpf antigo
+      status: usuario.status ? usuario.status.toUpperCase() : "ATIVO",
       tipoDeConta: usuario.tipoDeConta || "ALUNO",
-      senha: "",
+      senha: "", // Senha sempre limpa na edição
     });
     setErroValidacao("");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -166,10 +117,8 @@ export default function Usuarios() {
     setFormulario({
       id: null,
       nome: "",
-      email: "",
-      cpf: "",
-      dataNascimento: "",
-      status: "Ativo",
+      matricula: "",
+      status: "ATIVO",
       senha: "",
       tipoDeConta: "ALUNO",
     });
@@ -177,14 +126,9 @@ export default function Usuarios() {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case "Ativo":
-        return "badge-ativo";
-      case "Inativo":
-        return "badge-inativo";
-      default:
-        return "badge-inativo";
-    }
+    // Tratamento para garantir que pegue maiúsculo ou minúsculo
+    const s = status ? status.toUpperCase() : "ATIVO";
+    return s === "ATIVO" ? "badge-ativo" : "badge-inativo";
   };
 
   return (
@@ -206,6 +150,7 @@ export default function Usuarios() {
           </div>
         </header>
 
+        {/* --- CARD DO FORMULÁRIO --- */}
         <div className="card">
           <div className="card-header">
             {formulario.id ? (
@@ -213,15 +158,13 @@ export default function Usuarios() {
             ) : (
               <UserPlus size={24} style={{ color: "#2563eb" }} />
             )}
-            <span>{formulario.id ? "Editar Usuário" : "Novo Cadastro"}</span>
+            <span>{formulario.id ? "Editar Usuário" : "Novo Usuário"}</span>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="form-container"
-            autoComplete="off"
-          >
+          <form onSubmit={handleSubmit} className="form-container" autoComplete="off">
             <div className="form-grid">
+              
+              {/* CAMPO 1: NOME */}
               <div className="form-group">
                 <label>Nome Completo</label>
                 <input
@@ -231,42 +174,25 @@ export default function Usuarios() {
                   onChange={handleChange}
                   required
                   className="form-input"
+                  placeholder="Ex: Maria Silva"
                 />
               </div>
+
+              {/* CAMPO 2: MATRÍCULA (Substitui CPF) */}
               <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formulario.email}
-                  onChange={handleChange}
-                  autoComplete="new-password"
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label>CPF (Login)</label>
+                <label>Matrícula / Login</label>
                 <input
                   type="text"
-                  name="cpf"
-                  value={formulario.cpf}
+                  name="matricula"
+                  value={formulario.matricula}
                   onChange={handleChange}
-                  maxLength="14"
                   required
                   className="form-input"
+                  placeholder="Ex: 2023001"
                 />
               </div>
-              <div className="form-group">
-                <label>Data de Nascimento</label>
-                <input
-                  type="date"
-                  name="dataNascimento"
-                  value={formulario.dataNascimento}
-                  onChange={handleChange}
-                  className="form-input"
-                />
-              </div>
-              {/* --- NOVOS CAMPOS --- */}
+
+              {/* CAMPO 3: TIPO DE CONTA */}
               <div className="form-group">
                 <label>Tipo de Conta</label>
                 <select
@@ -275,11 +201,14 @@ export default function Usuarios() {
                   onChange={handleChange}
                   className="form-select"
                 >
-                  {/* Values em MAIÚSCULO */}
                   <option value="ALUNO">Aluno</option>
+                  <option value="PROFESSOR">Professor</option>
                   <option value="BIBLIOTECARIO">Bibliotecário</option>
+                  <option value="ADMIN">Administrador</option>
                 </select>
               </div>
+
+              {/* CAMPO 4: SENHA */}
               <div className="form-group">
                 <label>Senha</label>
                 <input
@@ -290,13 +219,14 @@ export default function Usuarios() {
                   className="form-input"
                   placeholder={
                     formulario.id
-                      ? "Deixe vazio para manter"
-                      : "Senha (Padrão: 123456789012)"
+                      ? "Vazio para manter a atual"
+                      : "Senha (Padrão: 123456)"
                   }
                   autoComplete="new-password"
                 />
               </div>
 
+              {/* CAMPO 5: STATUS */}
               <div className="form-group">
                 <label>Status</label>
                 <select
@@ -305,7 +235,6 @@ export default function Usuarios() {
                   onChange={handleChange}
                   className="form-select"
                 >
-                  {/* O 'value' tem que ser TUDO MAIÚSCULO para o Java aceitar */}
                   <option value="ATIVO">Ativo</option>
                   <option value="INATIVO">Inativo</option>
                 </select>
@@ -356,7 +285,7 @@ export default function Usuarios() {
               <Search className="icone-pesquisa" />
               <input
                 type="text"
-                placeholder="Pesquisar..."
+                placeholder="Pesquisar por nome ou matrícula..."
                 value={termoPesquisa}
                 onChange={(e) => setTermoPesquisa(e.target.value)}
                 className="input-pesquisa"
@@ -366,22 +295,16 @@ export default function Usuarios() {
 
           <div className="tabela-container">
             {usuarios.length === 0 ? (
-              <div
-                style={{
-                  padding: "2rem",
-                  textAlign: "center",
-                  color: "#64748b",
-                }}
-              >
+              <div style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>
                 <p>Nenhum usuário encontrado.</p>
               </div>
             ) : (
               <table className="tabela-usuarios">
                 <thead>
                   <tr>
-                    <th>Nome / Email</th>
-                    <th>CPF / Tipo</th>
-                    <th>Nascimento</th>
+                    <th>Nome</th>
+                    <th>Matrícula</th>
+                    <th>Tipo</th>
                     <th style={{ textAlign: "center" }}>Status</th>
                     <th style={{ textAlign: "right" }}>Ações</th>
                   </tr>
@@ -391,49 +314,33 @@ export default function Usuarios() {
                     <tr key={usuario.id}>
                       <td className="celula-info">
                         <div style={{ fontWeight: 600 }}>{usuario.nome}</div>
-                        <small>{usuario.email}</small>
                       </td>
                       <td style={{ fontFamily: "monospace" }}>
-                        <div>{usuario.cpf || usuario.matricula}</div>
-                        <span
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "#6366f1",
-                            fontWeight: "bold",
-                          }}
-                        >
+                        {usuario.matricula || usuario.cpf}
+                      </td>
+                      <td>
+                        <span style={{ fontSize: "0.85rem", color: "#6366f1", fontWeight: "bold" }}>
                           {usuario.tipoDeConta}
                         </span>
                       </td>
-                      <td>{formatarDataBR(usuario.dataNascimento)}</td>
                       <td style={{ textAlign: "center" }}>
-                        <span
-                          className={`badge ${getStatusColor(
-                            usuario.status || "Ativo"
-                          )}`}
-                        >
-                          {usuario.status || "Ativo"}
+                        <span className={`badge ${getStatusColor(usuario.status)}`}>
+                          {usuario.status || "ATIVO"}
                         </span>
                       </td>
                       <td style={{ textAlign: "right" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "flex-end",
-                            gap: "8px",
-                          }}
-                        >
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
                           <button
                             onClick={() => iniciarEdicao(usuario)}
                             className="btn-icon editar"
+                            title="Editar"
                           >
                             <Edit size={18} />
                           </button>
                           <button
-                            onClick={() =>
-                              handleExcluir(usuario.id, usuario.nome)
-                            }
+                            onClick={() => handleExcluir(usuario.id, usuario.nome)}
                             className="btn-icon excluir"
+                            title="Excluir"
                           >
                             <Trash2 size={18} />
                           </button>
