@@ -1,6 +1,6 @@
 // src/services/BookService.js
 
-const API_URL = "https://usuario-service-production-14cf.up.railway.app";
+const API_URL = "https://usuario-service-production-14cf.up.railway.app/livros";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
@@ -14,7 +14,9 @@ export const BookService = {
   // 1. LISTAR TODOS
   listarLivros: async () => {
     try {
-      const response = await fetch(`${API_URL}`);
+      const response = await fetch(`${API_URL}`, {
+        headers: getAuthHeaders(),
+      });
       if (!response.ok) throw new Error("Erro ao buscar livros");
       return await response.json();
     } catch (error) {
@@ -29,7 +31,7 @@ export const BookService = {
       const response = await fetch(`${API_URL}/buscar`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: termo
+        body: JSON.stringify(termo),
       });
       if (!response.ok) throw new Error("Erro na busca");
       return await response.json();
@@ -41,7 +43,6 @@ export const BookService = {
 
   // 3. CRIAR (POST)
   criarLivro: async (livroData) => {
-    // BLINDAGEM: Garante que números não vão como null/NaN
     const ano = parseInt(livroData.anoPublicacao);
     const qtd = parseInt(livroData.quantidade);
 
@@ -50,11 +51,11 @@ export const BookService = {
       autor: livroData.autor,
       isbn: livroData.isbn,
       anoPublicacao: isNaN(ano) ? 2024 : ano,
-      quantidadeTotal: isNaN(qtd) ? 0 : qtd,
-      quantidadeDisponivel: isNaN(qtd) ? 0 : qtd,
+      quantidadeTotal: isNaN(qtd) ? 1 : qtd,
+      quantidadeDisponivel: isNaN(qtd) ? 1 : qtd,
     };
 
-    const response = await fetch(API_URL, {
+    const response = await fetch(`${API_URL}`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(payload),
@@ -64,12 +65,7 @@ export const BookService = {
       let erroMsg = "Erro ao cadastrar livro";
       try {
         const erroJson = await response.json();
-        // Se vier objeto de erro complexo, converte pra string
-        if (typeof erroJson === 'object') {
-             erroMsg = JSON.stringify(erroJson);
-        } else {
-             erroMsg = erroJson.message || erroMsg;
-        }
+        erroMsg = JSON.stringify(erroJson);
       } catch {
         erroMsg = await response.text();
       }
@@ -80,7 +76,6 @@ export const BookService = {
 
   // 4. ATUALIZAR (PUT)
   atualizarLivro: async (id, livroData) => {
-    // BLINDAGEM: Garante que números não vão como null/NaN
     const ano = parseInt(livroData.anoPublicacao);
     const qtd = parseInt(livroData.quantidade);
 
@@ -89,7 +84,7 @@ export const BookService = {
       autor: livroData.autor,
       isbn: livroData.isbn,
       anoPublicacao: isNaN(ano) ? 2024 : ano,
-      quantidadeTotal: isNaN(qtd) ? 0 : qtd,
+      quantidadeTotal: isNaN(qtd) ? 1 : qtd,
     };
 
     const response = await fetch(`${API_URL}/${id}`, {
@@ -98,20 +93,8 @@ export const BookService = {
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      let erroMsg = "Erro ao atualizar livro";
-      try {
-        const erroJson = await response.json();
-        if (typeof erroJson === 'object') {
-             erroMsg = JSON.stringify(erroJson);
-        } else {
-             erroMsg = erroJson.message || erroMsg;
-        }
-      } catch {
-        erroMsg = await response.text();
-      }
-      throw new Error(erroMsg);
-    }
+    if (!response.ok) throw new Error("Erro ao atualizar livro");
+
     return await response.json();
   },
 
