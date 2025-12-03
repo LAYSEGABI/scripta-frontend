@@ -9,7 +9,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { SistemaContext } from "../context/SistemaContext";
-import { UserService } from "../services/UserService"; 
+import { UserService } from "../services/UserServices"; 
 import "../styles/usuarios.css";
 
 export default function Usuarios() {
