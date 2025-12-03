@@ -11,7 +11,7 @@ const getAuthHeaders = () => {
 };
 
 export const BookService = {
-  // 1. LISTAR TODOS
+
   listarLivros: async () => {
     try {
       const response = await fetch(`${API_URL}`, {
@@ -25,7 +25,6 @@ export const BookService = {
     }
   },
 
-  // 2. BUSCAR
   buscarLivros: async (termo) => {
     try {
       const response = await fetch(`${API_URL}/buscar`, {
@@ -41,7 +40,6 @@ export const BookService = {
     }
   },
 
-  // 3. CRIAR (POST)
   criarLivro: async (livroData) => {
     const ano = parseInt(livroData.anoPublicacao);
     const qtd = parseInt(livroData.quantidade);
@@ -74,17 +72,17 @@ export const BookService = {
     return await response.json();
   },
 
-  // 4. ATUALIZAR (PUT)
+  // 🔧 CORREÇÃO: NÃO reenviar quantidadeTotal quando editar
   atualizarLivro: async (id, livroData) => {
+
     const ano = parseInt(livroData.anoPublicacao);
-    const qtd = parseInt(livroData.quantidade);
 
     const payload = {
       titulo: livroData.titulo,
       autor: livroData.autor,
       isbn: livroData.isbn,
-      anoPublicacao: isNaN(ano) ? 2024 : ano,
-      quantidadeTotal: isNaN(qtd) ? 1 : qtd,
+      anoPublicacao: isNaN(ano) ? 2024 : ano
+
     };
 
     const response = await fetch(`${API_URL}/${id}`, {
@@ -98,7 +96,6 @@ export const BookService = {
     return await response.json();
   },
 
-  // 5. DELETAR (DELETE)
   deletarLivro: async (id) => {
     const response = await fetch(`${API_URL}/${id}`, {
       method: "DELETE",
@@ -109,7 +106,6 @@ export const BookService = {
     return true;
   },
 
-  // 6. IMPORTAR (POST)
   importarPorIsbn: async (isbn) => {
     const response = await fetch(`${API_URL}/importar/${isbn}`, {
       method: "POST",
@@ -120,7 +116,6 @@ export const BookService = {
     return await response.json();
   },
 
-  // 7. DECREMENTAR ESTOQUE (PUT)
   decrementarEstoque: async (id) => {
     const response = await fetch(`${API_URL}/${id}/estoque/decrementar`, {
       method: "PUT",
@@ -130,7 +125,6 @@ export const BookService = {
     return true;
   },
 
-  // 8. INCREMENTAR ESTOQUE (PUT)
   incrementarEstoque: async (id) => {
     const response = await fetch(`${API_URL}/${id}/estoque/incrementar`, {
       method: "PUT",
