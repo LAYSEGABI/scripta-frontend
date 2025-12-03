@@ -10,18 +10,17 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import { SistemaContext } from "../context/SistemaContext";
-import { UserService } from "../services/UserServices";
+import { UserService } from "../services/UserService"; 
 import "../styles/usuarios.css";
 
 export default function Usuarios() {
-  const { usuarios, adicionarUsuario, carregarUsuarios } = useContext(SistemaContext);
+  const { usuarios, carregarUsuarios } = useContext(SistemaContext);
 
-  // --- ESTADO DO FORMULÁRIO SIMPLIFICADO ---
   const [formulario, setFormulario] = useState({
     id: null,
     nome: "",
-    matricula: "", // Substitui o CPF/Email
-    status: "ATIVO", // Valor padrão maiúsculo para o Java
+    matricula: "",
+    status: "ATIVO",
     senha: "",
     tipoDeConta: "ALUNO",
   });
@@ -36,7 +35,6 @@ export default function Usuarios() {
     }
   }, [carregarUsuarios]);
 
-  // --- FILTRO SIMPLIFICADO ---
   const usuariosFiltrados = useMemo(() => {
     if (!termoPesquisa) return usuarios;
     const termo = termoPesquisa.toLowerCase();
@@ -52,35 +50,33 @@ export default function Usuarios() {
     setFormulario({ ...formulario, [name]: value });
   };
 
-  // --- SALVAR (SEM VALIDAÇÕES COMPLEXAS) ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErroValidacao("");
     setLoading(true);
 
     try {
-      // Validação básica de senha apenas se for preenchida
-      if (formulario.senha && formulario.senha.length < 3) {
+      if (formulario.senha && formulario.senha.length > 0 && formulario.senha.length < 3) {
         setErroValidacao("A senha é muito curta.");
         setLoading(false);
         return;
       }
 
-      // Prepara o objeto para o Context/Service
-      const usuarioParaSalvar = {
-        ...formulario,
-        // Garante que se for edição, mantém o ID
-      };
+      const usuarioParaSalvar = { ...formulario };
 
-      const sucesso = await adicionarUsuario(usuarioParaSalvar);
-
-      if (sucesso) {
-        alert("Salvo com sucesso!"); // Feedback simples
-        resetFormulario();
-        if (carregarUsuarios) await carregarUsuarios();
+      if (formulario.id) {
+        // ATUALIZAR
+        await UserService.atualizarUsuario(formulario.id, usuarioParaSalvar);
+        alert("Usuário atualizado com sucesso!");
       } else {
-        setErroValidacao("Erro ao salvar. Tente novamente.");
+        // CRIAR
+        await UserService.criarUsuario(usuarioParaSalvar);
+        alert("Usuário cadastrado com sucesso!");
       }
+
+      resetFormulario();
+      if (carregarUsuarios) await carregarUsuarios();
+
     } catch (error) {
       setErroValidacao("Erro: " + error.message);
     } finally {
@@ -104,10 +100,10 @@ export default function Usuarios() {
     setFormulario({
       id: usuario.id,
       nome: usuario.nome,
-      matricula: usuario.matricula || usuario.cpf || "", // Tenta pegar matrícula ou cpf antigo
+      matricula: usuario.matricula || usuario.cpf || "",
       status: usuario.status ? usuario.status.toUpperCase() : "ATIVO",
       tipoDeConta: usuario.tipoDeConta || "ALUNO",
-      senha: "", // Senha sempre limpa na edição
+      senha: "",
     });
     setErroValidacao("");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -126,7 +122,6 @@ export default function Usuarios() {
   };
 
   const getStatusColor = (status) => {
-    // Tratamento para garantir que pegue maiúsculo ou minúsculo
     const s = status ? status.toUpperCase() : "ATIVO";
     return s === "ATIVO" ? "badge-ativo" : "badge-inativo";
   };
@@ -150,7 +145,6 @@ export default function Usuarios() {
           </div>
         </header>
 
-        {/* --- CARD DO FORMULÁRIO --- */}
         <div className="card">
           <div className="card-header">
             {formulario.id ? (
@@ -163,8 +157,6 @@ export default function Usuarios() {
 
           <form onSubmit={handleSubmit} className="form-container" autoComplete="off">
             <div className="form-grid">
-              
-              {/* CAMPO 1: NOME */}
               <div className="form-group">
                 <label>Nome Completo</label>
                 <input
@@ -177,8 +169,6 @@ export default function Usuarios() {
                   placeholder="Ex: Maria Silva"
                 />
               </div>
-
-              {/* CAMPO 2: MATRÍCULA (Substitui CPF) */}
               <div className="form-group">
                 <label>Matrícula / Login</label>
                 <input
@@ -191,8 +181,6 @@ export default function Usuarios() {
                   placeholder="Ex: 2023001"
                 />
               </div>
-
-              {/* CAMPO 3: TIPO DE CONTA */}
               <div className="form-group">
                 <label>Tipo de Conta</label>
                 <select
@@ -207,8 +195,6 @@ export default function Usuarios() {
                   <option value="ADMIN">Administrador</option>
                 </select>
               </div>
-
-              {/* CAMPO 4: SENHA */}
               <div className="form-group">
                 <label>Senha</label>
                 <input
@@ -217,16 +203,10 @@ export default function Usuarios() {
                   value={formulario.senha}
                   onChange={handleChange}
                   className="form-input"
-                  placeholder={
-                    formulario.id
-                      ? "Vazio para manter a atual"
-                      : "Senha (Padrão: 123456)"
-                  }
+                  placeholder={formulario.id ? "Vazio para manter a atual" : "Senha (Padrão: 123456)"}
                   autoComplete="new-password"
                 />
               </div>
-
-              {/* CAMPO 5: STATUS */}
               <div className="form-group">
                 <label>Status</label>
                 <select
@@ -249,25 +229,12 @@ export default function Usuarios() {
             )}
 
             <div className="form-actions">
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={loading}
-              >
+              <button type="submit" className="btn btn-primary" disabled={loading}>
                 <Save size={18} />
-                {loading
-                  ? "Salvando..."
-                  : formulario.id
-                  ? "Salvar Alterações"
-                  : "Cadastrar"}
+                {loading ? "Salvando..." : formulario.id ? "Salvar Alterações" : "Cadastrar"}
               </button>
-
               {formulario.id && (
-                <button
-                  type="button"
-                  onClick={resetFormulario}
-                  className="btn btn-secondary"
-                >
+                <button type="button" onClick={resetFormulario} className="btn btn-secondary">
                   <X size={18} /> Cancelar
                 </button>
               )}
@@ -275,24 +242,20 @@ export default function Usuarios() {
           </form>
         </div>
 
-        {/* --- LISTAGEM --- */}
         <div className="card">
           <div className="pesquisa-wrapper">
-            <h2 className="titulo-secao">
-              Usuários Cadastrados ({usuariosFiltrados.length})
-            </h2>
+            <h2 className="titulo-secao">Usuários Cadastrados ({usuariosFiltrados.length})</h2>
             <div className="input-pesquisa-container">
               <Search className="icone-pesquisa" />
               <input
                 type="text"
-                placeholder="Pesquisar por nome ou matrícula..."
+                placeholder="Pesquisar..."
                 value={termoPesquisa}
                 onChange={(e) => setTermoPesquisa(e.target.value)}
                 className="input-pesquisa"
               />
             </div>
           </div>
-
           <div className="tabela-container">
             {usuarios.length === 0 ? (
               <div style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>
@@ -312,38 +275,14 @@ export default function Usuarios() {
                 <tbody>
                   {usuariosFiltrados.map((usuario) => (
                     <tr key={usuario.id}>
-                      <td className="celula-info">
-                        <div style={{ fontWeight: 600 }}>{usuario.nome}</div>
-                      </td>
-                      <td style={{ fontFamily: "monospace" }}>
-                        {usuario.matricula || usuario.cpf}
-                      </td>
-                      <td>
-                        <span style={{ fontSize: "0.85rem", color: "#6366f1", fontWeight: "bold" }}>
-                          {usuario.tipoDeConta}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <span className={`badge ${getStatusColor(usuario.status)}`}>
-                          {usuario.status || "ATIVO"}
-                        </span>
-                      </td>
+                      <td className="celula-info"><div style={{ fontWeight: 600 }}>{usuario.nome}</div></td>
+                      <td style={{ fontFamily: "monospace" }}>{usuario.matricula || usuario.cpf}</td>
+                      <td><span style={{ fontSize: "0.85rem", color: "#6366f1", fontWeight: "bold" }}>{usuario.tipoDeConta}</span></td>
+                      <td style={{ textAlign: "center" }}><span className={`badge ${getStatusColor(usuario.status)}`}>{usuario.status || "ATIVO"}</span></td>
                       <td style={{ textAlign: "right" }}>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-                          <button
-                            onClick={() => iniciarEdicao(usuario)}
-                            className="btn-icon editar"
-                            title="Editar"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleExcluir(usuario.id, usuario.nome)}
-                            className="btn-icon excluir"
-                            title="Excluir"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          <button onClick={() => iniciarEdicao(usuario)} className="btn-icon editar"><Edit size={18} /></button>
+                          <button onClick={() => handleExcluir(usuario.id, usuario.nome)} className="btn-icon excluir"><Trash2 size={18} /></button>
                         </div>
                       </td>
                     </tr>

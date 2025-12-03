@@ -1,18 +1,11 @@
 // const BASE_URL = "http://localhost:8082";
-
 const BASE_URL = "https://usuario-service-production-14cf.up.railway.app";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
-  
-  // Se não tem token ou ele é apenas espaços vazios, retorna objeto vazio
   if (!token || token.trim() === "") {
-    return {
-      "Content-Type": "application/json"
-    };
+    return { "Content-Type": "application/json" };
   }
-
-  // Se tem token, garante que não tem espaços extras
   return {
     "Content-Type": "application/json",
     "Authorization": `Bearer ${token.trim()}`,
@@ -20,15 +13,10 @@ const getAuthHeaders = () => {
 };
 
 export const UserService = {
-
   // --- LOGIN ---
   login: async (matricula, senha) => {
     console.log("Tentando login com:", matricula, senha);
-
-    // Aceita qualquer login, ou defina um específico se quiser
-    // Aqui estou aceitando se digitar qualquer coisa
     if (matricula && senha) {
-      
       const usuarioFake = {
         id: 1,
         nome: "Administrador (Demo)",
@@ -36,15 +24,10 @@ export const UserService = {
         tipoDeConta: "ADMIN",
         email: "admin@demo.com"
       };
-
-      // Salva um token falso e o usuário no navegador para o sistema achar que está logado
       localStorage.setItem("token", "token_demo_apresentacao_123");
       localStorage.setItem("usuario", JSON.stringify(usuarioFake));
-
-      // Retorna sucesso imediato
       return Promise.resolve(usuarioFake);
     }
-
     throw new Error("Preencha login e senha.");
   },
 
@@ -62,38 +45,49 @@ export const UserService = {
     }
   },
 
-  // --- CRIAR (CORRIGIDO) ---
- // --- CRIAR (SIMPLIFICADO PARA APRESENTAÇÃO) ---
+  // --- CRIAR ---
   criarUsuario: async (usuarioData) => {
-    
-    // Monta apenas o payload que o Backend espera agora
     const payload = {
       nome: usuarioData.nome,
-      matricula: usuarioData.matricula, // Agora a matrícula vai direta, sem limpar CPF
-      senha: usuarioData.senha || "123456", // Senha padrão se não preencher
+      matricula: usuarioData.matricula,
+      senha: usuarioData.senha || "123456",
       tipoDeConta: usuarioData.tipoDeConta || "ALUNO",
       status: "ATIVO"
     };
 
-    console.log("Enviando payload:", payload);
-
     const response = await fetch(`${BASE_URL}/usuarios`, {
       method: "POST",
-      // Como removemos a segurança, nem precisaria de header, mas mal não faz
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      throw new Error("Erro ao criar usuário.");
-    }
+    if (!response.ok) throw new Error("Erro ao criar usuário.");
     
-    // Tenta ler o JSON, se falhar (vazio), retorna sucesso genérico
     try {
         return await response.json();
     } catch (e) {
         return { message: "Criado com sucesso" };
     }
+  },
+
+  // --- ATUALIZAR (ADICIONADO AGORA) ---
+  atualizarUsuario: async (id, usuarioData) => {
+    const payload = {
+      nome: usuarioData.nome,
+      matricula: usuarioData.matricula,
+      senha: usuarioData.senha, // Manda a senha nova se tiver, ou vazia
+      tipoDeConta: usuarioData.tipoDeConta,
+      status: usuarioData.status
+    };
+
+    const response = await fetch(`${BASE_URL}/usuarios/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) throw new Error("Erro ao atualizar usuário.");
+    return true; // Retorna sucesso simples
   },
 
   // --- PERFIL ---
