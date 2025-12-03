@@ -72,17 +72,23 @@ export const BookService = {
     return await response.json();
   },
 
-  // 🔧 CORREÇÃO: NÃO reenviar quantidadeTotal quando editar
+  // --- CORREÇÃO APLICADA AQUI ---
   atualizarLivro: async (id, livroData) => {
-
     const ano = parseInt(livroData.anoPublicacao);
+    
+    // Captura o campo 'quantidade' que vem do formulário React
+    const qtd = parseInt(livroData.quantidade);
 
     const payload = {
       titulo: livroData.titulo,
       autor: livroData.autor,
       isbn: livroData.isbn,
-      anoPublicacao: isNaN(ano) ? 2024 : ano
-
+      anoPublicacao: isNaN(ano) ? 2024 : ano,
+      
+      // Se 'qtd' for um número válido, enviamos para o Java.
+      // Se for inválido (NaN), enviamos undefined para o Java ignorar e manter o valor antigo.
+      quantidadeTotal: isNaN(qtd) ? undefined : qtd,
+      quantidadeDisponivel: isNaN(qtd) ? undefined : qtd
     };
 
     const response = await fetch(`${API_URL}/${id}`, {
