@@ -50,7 +50,7 @@ export const UserService = {
     const payload = {
       nome: usuarioData.nome,
       matricula: usuarioData.matricula,
-      senha: usuarioData.senha || "123456",
+      senha: usuarioData.senha || "adminsenha123456",
       tipoDeConta: usuarioData.tipoDeConta || "ALUNO",
       status: "ATIVO"
     };
