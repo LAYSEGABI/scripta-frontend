@@ -96,7 +96,7 @@ export default function Usuarios() {
     }
   };
 
-  const iniciarEdicao = (usuario) => {
+ /* const iniciarEdicao = (usuario) => {
     setFormulario({
       id: usuario.id,
       nome: usuario.nome,
@@ -107,7 +107,7 @@ export default function Usuarios() {
     });
     setErroValidacao("");
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  };*/
 
   const resetFormulario = () => {
     setFormulario({
@@ -281,7 +281,7 @@ export default function Usuarios() {
                       <td style={{ textAlign: "center" }}><span className={`badge ${getStatusColor(usuario.status)}`}>{usuario.status || "ATIVO"}</span></td>
                       <td style={{ textAlign: "right" }}>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-                          <button onClick={() => iniciarEdicao(usuario)} className="btn-icon editar"><Edit size={18} /></button>
+      
                           <button onClick={() => handleExcluir(usuario.id, usuario.nome)} className="btn-icon excluir"><Trash2 size={18} /></button>
                         </div>
                       </td>
