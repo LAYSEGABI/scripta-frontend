@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useContext, useEffect } from "react";
 import {
   Trash2,
-  Edit,
   Search,
   UserPlus,
   Save,
@@ -17,7 +16,6 @@ export default function Usuarios() {
   const { usuarios, carregarUsuarios } = useContext(SistemaContext);
 
   const [formulario, setFormulario] = useState({
-    id: null,
     nome: "",
     matricula: "",
     status: "ATIVO",
@@ -50,6 +48,7 @@ export default function Usuarios() {
     setFormulario({ ...formulario, [name]: value });
   };
 
+  // --- MODO APENAS CADASTRO ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErroValidacao("");
@@ -62,17 +61,9 @@ export default function Usuarios() {
         return;
       }
 
-      const usuarioParaSalvar = { ...formulario };
-
-      if (formulario.id) {
-        // ATUALIZAR
-        await UserService.atualizarUsuario(formulario.id, usuarioParaSalvar);
-        alert("Usuário atualizado com sucesso!");
-      } else {
-        // CRIAR
-        await UserService.criarUsuario(usuarioParaSalvar);
-        alert("Usuário cadastrado com sucesso!");
-      }
+      // CRIAÇÃO DIRETA (Ignora qualquer ID)
+      await UserService.criarUsuario(formulario);
+      alert("Usuário cadastrado com sucesso!");
 
       resetFormulario();
       if (carregarUsuarios) await carregarUsuarios();
@@ -96,22 +87,8 @@ export default function Usuarios() {
     }
   };
 
- /* const iniciarEdicao = (usuario) => {
-    setFormulario({
-      id: usuario.id,
-      nome: usuario.nome,
-      matricula: usuario.matricula || usuario.cpf || "",
-      status: usuario.status ? usuario.status.toUpperCase() : "ATIVO",
-      tipoDeConta: usuario.tipoDeConta || "ALUNO",
-      senha: "",
-    });
-    setErroValidacao("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };*/
-
   const resetFormulario = () => {
     setFormulario({
-      id: null,
       nome: "",
       matricula: "",
       status: "ATIVO",
@@ -145,14 +122,11 @@ export default function Usuarios() {
           </div>
         </header>
 
+        {/* --- CARD DE CADASTRO --- */}
         <div className="card">
           <div className="card-header">
-            {formulario.id ? (
-              <Edit size={24} style={{ color: "#f59e0b" }} />
-            ) : (
-              <UserPlus size={24} style={{ color: "#2563eb" }} />
-            )}
-            <span>{formulario.id ? "Editar Usuário" : "Novo Usuário"}</span>
+            <UserPlus size={24} style={{ color: "#2563eb" }} />
+            <span>Novo Usuário</span>
           </div>
 
           <form onSubmit={handleSubmit} className="form-container" autoComplete="off">
@@ -203,7 +177,7 @@ export default function Usuarios() {
                   value={formulario.senha}
                   onChange={handleChange}
                   className="form-input"
-                  placeholder={formulario.id ? "Vazio para manter a atual" : "Senha (Padrão: 123456)"}
+                  placeholder="Senha (Padrão: 123456)"
                   autoComplete="new-password"
                 />
               </div>
@@ -231,17 +205,17 @@ export default function Usuarios() {
             <div className="form-actions">
               <button type="submit" className="btn btn-primary" disabled={loading}>
                 <Save size={18} />
-                {loading ? "Salvando..." : formulario.id ? "Salvar Alterações" : "Cadastrar"}
+                {loading ? "Salvando..." : "Cadastrar"}
               </button>
-              {formulario.id && (
-                <button type="button" onClick={resetFormulario} className="btn btn-secondary">
-                  <X size={18} /> Cancelar
-                </button>
-              )}
+              
+              <button type="button" onClick={resetFormulario} className="btn btn-secondary">
+                  <X size={18} /> Limpar
+              </button>
             </div>
           </form>
         </div>
 
+        {/* --- LISTAGEM (Sem botão editar) --- */}
         <div className="card">
           <div className="pesquisa-wrapper">
             <h2 className="titulo-secao">Usuários Cadastrados ({usuariosFiltrados.length})</h2>
@@ -281,8 +255,12 @@ export default function Usuarios() {
                       <td style={{ textAlign: "center" }}><span className={`badge ${getStatusColor(usuario.status)}`}>{usuario.status || "ATIVO"}</span></td>
                       <td style={{ textAlign: "right" }}>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-      
-                          <button onClick={() => handleExcluir(usuario.id, usuario.nome)} className="btn-icon excluir"><Trash2 size={18} /></button>
+                          
+                          {/* Botão de editar foi removido */}
+                          
+                          <button onClick={() => handleExcluir(usuario.id, usuario.nome)} className="btn-icon excluir" title="Excluir">
+                            <Trash2 size={18} />
+                          </button>
                         </div>
                       </td>
                     </tr>
